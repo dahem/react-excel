@@ -1,35 +1,62 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import ReactHTMLTableToExcel from 'react-html-table-to-excel';
+import XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 function App() {
     const columns = ['First name', 'Last name', 'Age'];
     const data = [['Jill', 'Smith', 50], ['Jill', 'Smith', 50], ['Jill', 'Smith', 50]];
-     const btnExportEl = useRef(null);
-    const exportXLSX = (e) => {
+
+        const wb = XLSX.utils.book_new();
+        wb.Props = {
+            Title: "SheetJS Tutorial",
+            Subject: "Test",
+            Author: "Red Stapler",
+            CreatedDate: new Date(2017,12,19)
+        };
         
-        console.log(btnExportEl.current.handleDownload());
+        wb.SheetNames.push("Test Sheet");
+        const ws_data = [['hello' , 'world']];
+        const ws = XLSX.utils.aoa_to_sheet([columns, ...data]);
+        const wscols = [
+            {wpx: 200},
+            {wpx: 100},
+            {wpx: 50},
+        ];
+        ws['!cols'] = wscols;
+        console.log(ws);
+        wb.Sheets["Test Sheet"] = ws;
+        const wbout = XLSX.write(wb, {bookType:'xlsx',  type: 'binary'});
+        const s2ab = (s) => {
+  
+            const buf = new ArrayBuffer(s.length);
+            const view = new Uint8Array(buf);
+            for (let i=0; i<s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+            return buf;
+                
+        }
+    const exportXLSX = (e) => {
+        saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'test.xlsx');
+       /* 
+       XLSX.writeFile({
+	SheetNames:["Sheet1"],
+	Sheets: {
+		Sheet1: {
+			"!ref": "A1:B2",
+			A1:{t:'s', v:"A1:A2"},
+			B1:{t:'n', v:1},
+			B2:{t:'b', v:true},
+			"!merges":[
+				{s:{r:0,c:0},e:{r:1,c:0}}
+			]
+		}
+	}
+}, 'test.xlsx'); */
     }
   return (
     <div className="App">
         <button type="button" onClick={exportXLSX}>Click Me!</button>
-        <div style={{ display: 'none' }}>
-            <ReactHTMLTableToExcel
-                        ref={btnExportEl}
-                        id="test-table-xls-button"
-                        className="download-table-xls-button"
-                        table="table-to-xls"
-                        filename="tablexls"
-                        sheet="tablexls"
-                        buttonText="Download as XLS"/>
-        <table id="table-to-xls">
-            <tr>
-                {columns.map(c => <th>{c}</th>)}
-            </tr>
-            {data.map(row => <tr>{
-                row.map(cell => <td>{cell}</td>)
-            }</tr>)}
-        </table>
-        </div>
+        
     </div>
   );
 }
