@@ -1,59 +1,66 @@
 import React from 'react';
-import ReactHTMLTableToExcel from 'react-html-table-to-excel';
-import XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
+import XlsxPopulate from 'xlsx-populate';
+
+function getCol(c) {
+    return String.fromCharCode('A'.charCodeAt(0) + c);    
+}
 
 function App() {
-    const columns = ['First name', 'Last name', 'Age'];
-    const data = [['Jill', 'Smith', 50], ['Jill', 'Smith', 50], ['Jill', 'Smith', 50]];
-
-        const wb = XLSX.utils.book_new();
-        wb.Props = {
-            Title: "SheetJS Tutorial",
-            Subject: "Test",
-            Author: "Red Stapler",
-            CreatedDate: new Date(2017,12,19)
-        };
-        
-        wb.SheetNames.push("Test Sheet");
-        const ws_data = [['hello' , 'world']];
-        const ws = XLSX.utils.aoa_to_sheet([columns, ...data]);
-        const wscols = [
-            {wpx: 200},
-            {wpx: 100},
-            {wpx: 50},
-        ];
-        ws['!cols'] = wscols;
-        console.log(ws);
-        wb.Sheets["Test Sheet"] = ws;
-        const wbout = XLSX.write(wb, {bookType:'xlsx',  type: 'binary'});
-        const s2ab = (s) => {
-  
-            const buf = new ArrayBuffer(s.length);
-            const view = new Uint8Array(buf);
-            for (let i=0; i<s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
-            return buf;
-                
-        }
-    const exportXLSX = (e) => {
-        saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'test.xlsx');
-       /* 
-       XLSX.writeFile({
-	SheetNames:["Sheet1"],
-	Sheets: {
-		Sheet1: {
-			"!ref": "A1:B2",
-			A1:{t:'s', v:"A1:A2"},
-			B1:{t:'n', v:1},
-			B2:{t:'b', v:true},
-			"!merges":[
-				{s:{r:0,c:0},e:{r:1,c:0}}
-			]
-		}
-	}
-}, 'test.xlsx'); */
+    const reportTitle = 'xxxxxxxxreportxxxxxxxxxx';
+    const columns = ['First ', 'Last name', 'Age', 'Date'];
+    const data = [
+        ['Jill namexxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxdfsdfsxxxs', 'Smith', 50, new Date()],
+        ['Jill', 'Smith', 50, new Date()],
+        ['Jill', 'Smith', 50, new Date()]
+    ];
+    
+    const generate = (type) => {
+        return XlsxPopulate.fromBlankAsync()
+            .then(function (workbook) {
+                const range = workbook.sheet(0).range(`A1:${getCol(columns.length-1)}1`);
+                range.value(reportTitle);
+                range.style({horizontalAlignment: "center", verticalAlignment: "center" })
+                range.merged(true);
+                columns.forEach((col, c) => {
+                    workbook.sheet(0).column(getCol(c)).width(25);
+                    workbook.sheet(0).row(2).cell(c+1).value(col).style({ bold: true, italic: true });
+                });
+                data.forEach((row, r) => {
+                    row.forEach((cell, c) => {
+                        
+                        const cellValue = workbook.sheet(0).row(r+3).cell(c+1).value(cell).style({ horizontalAlignment: 'distributed', 'wrapText': true });
+                        if (cell instanceof Date) {
+                            cellValue.style("numberFormat", "DD/MM/YYYY");
+                        }
+                    });
+                });
+                return workbook.outputAsync({ type: type });
+            });
     }
-  return (
+
+    const exportXLSX = () => {
+        return generate()
+            .then(function (blob) {
+                if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+                    window.navigator.msSaveOrOpenBlob(blob, "out.xlsx");
+                } else {
+                    var url = window.URL.createObjectURL(blob);
+                    var a = document.createElement("a");
+                    document.body.appendChild(a);
+                    a.href = url;
+                    a.download = "out.xlsx";
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                }
+            })
+            .catch(function (err) {
+                alert(err.message || err);
+                throw err;
+            });
+    }
+
+    return (
     <div className="App">
         <button type="button" onClick={exportXLSX}>Click Me!</button>
         
